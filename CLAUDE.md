@@ -10,20 +10,19 @@ tlipob-importer is a Python OCR tool that extracts structured item data (name, e
 
 ```bash
 # Run all tests (requires example screenshots in /examples/inventory/)
-pytest
+uv run pytest
 
 # Run a single test
-pytest tests/test_ocr.py::test_screenshot_1
+uv run pytest tests/test_ocr.py::test_screenshot_1
 
 # Type checking (strict mode)
-pyright
+uv run pyright
 
 # Lint and format
-ruff check src/
-ruff format src/
+uv run ruff check --fix
 
 # Run CLI on screenshots
-python src/ocr/main.py path/to/screenshot.png
+uv run python src/ocr/main.py path/to/screenshot.png
 ```
 
 Uses `uv` as the package manager. Python 3.13+.

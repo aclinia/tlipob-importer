@@ -2,7 +2,6 @@ import sys
 from typing import Any
 
 import cv2
-import easyocr  # type: ignore[import-untyped]
 
 from .ocr_engine import extract_text
 from .parser import ItemData, parse_tooltip_text
