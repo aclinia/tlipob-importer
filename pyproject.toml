@@ -1,9 +1,11 @@
 [project]
 name = "tlipob-importer"
 version = "0.1.0"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 dependencies = [
     "easyocr>=1.7.2",
+    "paddleocr>=3.4.0",
+    "paddlepaddle>=3.3.0",
     "pyside6-essentials>=6.10.2",
 ]
 

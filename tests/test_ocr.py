@@ -116,7 +116,7 @@ def test_screenshot_5(reader: Any) -> None:
     assert d["equipmentType"] == "One-Handed Sword"
     assert d["baseStats"] == "371 Physical DPS"
     assert d["customAffixes"] == [
-        "#Ito Max Focus Blessing",
+        "+Ito Max Focus Blessing",
         "Stacks",
         "+20% Attack Critical Strike",
         "Rating for this gear",
@@ -141,7 +141,7 @@ def test_screenshot_6(reader: Any) -> None:
     assert d["baseStats"] == "999 Max Energy Shield"
     assert d["customAffixes"] == [
         "+8% Aura Effect",
-        "+8% Aura \u20acffect",
+        "+8% Aura Effect",
         "-1% Max Elemental Resistance",
         "+14% additional Max Energy",
         "Shield",
@@ -221,7 +221,7 @@ def test_screenshot_9(reader: Any) -> None:
         "100% chance to gain a Barrier",
         "for every 5 m you move",
         "+92% Critical Strike Rating",
-        "+7%/ Elemental Resistance",
+        "+7% Elemental Resistance",
         "+7% Erosion Resistance",
     ]
 
@@ -237,7 +237,7 @@ def test_screenshot_10(reader: Any) -> None:
         "+4O Dexterity",
         "Converts 44% of Erosion Damage",
         "taken to Cold Damage",
-        "~Ito Max Tenacity Blessing",
+        "-Ito Max Tenacity Blessing",
         "Stacks",
         "All Passive Skill slots are",
         "supported by Lv: 30 Precise:",
@@ -250,5 +250,5 @@ def test_screenshot_10(reader: Any) -> None:
         "+4 Active Skill Level",
         "+10z% Critical Strike Damage",
         "+44% Warcry Effect",
-        "+17/ Elemental Resistance",
+        "+17 Elemental Resistance",
     ]

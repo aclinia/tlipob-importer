@@ -7,7 +7,6 @@ import numpy as np
 type Bbox = list[list[int]]
 type OcrResult = tuple[Bbox, str, float, tuple[float, float, float]]
 
-
 def preprocess_tooltip(tooltip_img: np.ndarray) -> np.ndarray:
     """Preprocess a cropped tooltip image for OCR.
 
@@ -68,6 +67,7 @@ def extract_text(
         text_threshold=0.5,
         low_text=0.3,
         width_ths=0.7,
+        allowlist="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-.:%'()[] ",
     )
 
     # Sort by vertical position (top of bounding box)
