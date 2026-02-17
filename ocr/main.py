@@ -4,9 +4,9 @@ import sys
 import cv2
 import easyocr
 
-from ocr_engine import extract_text
-from parser import ItemData, parse_tooltip_text
-from tooltip_detector import detect_separator_line, detect_tooltip_region
+from .ocr_engine import extract_text
+from .parser import ItemData, parse_tooltip_text
+from .tooltip_detector import detect_separator_line, detect_tooltip_region
 
 
 def process_screenshot(image_path: str, reader: easyocr.Reader) -> ItemData | None:
