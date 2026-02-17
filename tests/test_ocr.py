@@ -3,7 +3,7 @@ from typing import Any
 import pytest
 import easyocr  # type: ignore[import-untyped]
 
-from ocr.ocr import process_screenshot
+from src.ocr.ocr import process_screenshot
 
 EXAMPLES_DIR = "examples/inventory"
 
