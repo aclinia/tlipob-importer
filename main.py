@@ -1,18 +1,16 @@
+import json
 import sys
 
 import cv2
 import easyocr
 
 from ocr_engine import extract_text
-from parser import parse_tooltip_text
-from tooltip_detector import detect_tooltip_region
+from parser import ItemData, parse_tooltip_text
+from tooltip_detector import detect_separator_line, detect_tooltip_region
 
 
-def process_screenshot(image_path: str, reader: easyocr.Reader) -> str | None:
-    """Process a single screenshot through the full pipeline.
-
-    Returns newline-joined stat text, or None if tooltip not found.
-    """
+def process_screenshot(image_path: str, reader: easyocr.Reader) -> ItemData | None:
+    """Process a single screenshot through the full pipeline."""
     image = cv2.imread(image_path)
     if image is None:
         print(f"Error: could not read {image_path}", file=sys.stderr)
@@ -26,10 +24,10 @@ def process_screenshot(image_path: str, reader: easyocr.Reader) -> str | None:
     x, y, w, h = region
     tooltip_img = image[y : y + h, x : x + w]
 
+    separator_y = detect_separator_line(tooltip_img)
     ocr_results = extract_text(tooltip_img, reader)
-    lines = parse_tooltip_text(ocr_results)
 
-    return "\n".join(lines)
+    return parse_tooltip_text(ocr_results, separator_y)
 
 
 def main():
@@ -40,11 +38,11 @@ def main():
     reader = easyocr.Reader(["en"], gpu=True)
 
     for path in sys.argv[1:]:
-        result = process_screenshot(path, reader)
-        if result:
+        item = process_screenshot(path, reader)
+        if item:
             if len(sys.argv) > 2:
                 print(f"--- {path} ---")
-            print(result)
+            print(json.dumps(item.to_dict(), indent=2))
             print()
 
 
