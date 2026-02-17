@@ -14,24 +14,17 @@ EXCLUDE_PATTERNS = [
     re.compile(r"^Rarity", re.IGNORECASE),
 ]
 
-# When a line matches one of these, stop processing (flavor text starts)
-FLAVOR_INDICATORS = [
-    re.compile(r"^At first", re.IGNORECASE),
-    re.compile(r"^The road ahead", re.IGNORECASE),
-    re.compile(r"^A\s*bunch of", re.IGNORECASE),
-    re.compile(r"^A hero is", re.IGNORECASE),
-    re.compile(r"^After about", re.IGNORECASE),
-    re.compile(r"the dream", re.IGNORECASE),
-    re.compile(r"^Legend has", re.IGNORECASE),
-    re.compile(r"^calm[;,]?\s*and", re.IGNORECASE),
-    re.compile(r"^adventure and", re.IGNORECASE),
-    re.compile(r"^thorns cover", re.IGNORECASE),
-    re.compile(r"^land[;,]", re.IGNORECASE),
-    re.compile(r"of the Fire Lord", re.IGNORECASE),
-    re.compile(r"neatly cut flames", re.IGNORECASE),
-]
+# Flavor text color in HSV (warm yellow/orange, H≈15-25, S≈100-150)
+FLAVOR_HUE_RANGE = (12, 28)
+FLAVOR_SAT_RANGE = (80, 170)
 
 MIN_CONFIDENCE = 0.3
+
+
+def _is_flavor_text(hsv: tuple[float, float, float]) -> bool:
+    """Check if the text color matches the flavor text style (warm orange/yellow)."""
+    h, s, _v = hsv
+    return FLAVOR_HUE_RANGE[0] <= h <= FLAVOR_HUE_RANGE[1] and FLAVOR_SAT_RANGE[0] <= s <= FLAVOR_SAT_RANGE[1]
 
 
 def clean_ocr_text(text: str) -> str:
@@ -50,18 +43,20 @@ def clean_ocr_text(text: str) -> str:
     return text
 
 
-def parse_tooltip_text(ocr_results: list[tuple[list, str, float]]) -> list[str]:
+def parse_tooltip_text(
+    ocr_results: list[tuple[list, str, float, tuple[float, float, float]]],
+) -> list[str]:
     """Filter and clean OCR results into item stat lines.
 
     Args:
-        ocr_results: List of (bbox, text, confidence) from EasyOCR.
+        ocr_results: List of (bbox, text, confidence, hsv) from extract_text.
 
     Returns:
         Cleaned lines: item name, type, base stat, modifiers.
     """
     lines = []
 
-    for _bbox, raw_text, confidence in ocr_results:
+    for _, raw_text, confidence, hsv in ocr_results:
         if confidence < MIN_CONFIDENCE:
             continue
 
@@ -70,14 +65,11 @@ def parse_tooltip_text(ocr_results: list[tuple[list, str, float]]) -> list[str]:
             continue
 
         # Skip very short garbage lines (single chars, digits)
-        if len(text) <= 2 and not re.match(r"^\d+$", text):
-            continue
-        # Skip standalone single digits (OCR noise)
-        if re.match(r"^\d$", text):
+        if len(text) <= 2:
             continue
 
-        # Check for flavor text — stop processing
-        if any(p.search(text) for p in FLAVOR_INDICATORS):
+        # Flavor text is warm yellow/orange — stop processing once we hit it
+        if _is_flavor_text(hsv):
             break
 
         # Skip excluded lines

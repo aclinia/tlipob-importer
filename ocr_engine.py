@@ -15,9 +15,33 @@ def preprocess_tooltip(tooltip_img: np.ndarray) -> np.ndarray:
     return upscaled
 
 
+def _median_text_hsv(
+    image_hsv: np.ndarray, image_gray: np.ndarray, bbox: list
+) -> tuple[float, float, float]:
+    """Compute the median HSV of bright (text) pixels within a bounding box."""
+    pts = np.array(bbox, dtype=np.int32)
+    y1 = max(0, pts[:, 1].min())
+    y2 = min(image_hsv.shape[0], pts[:, 1].max())
+    x1 = max(0, pts[:, 0].min())
+    x2 = min(image_hsv.shape[1], pts[:, 0].max())
+
+    roi_hsv = image_hsv[y1:y2, x1:x2]
+    roi_gray = image_gray[y1:y2, x1:x2]
+
+    bright = roi_gray > 100
+    if np.sum(bright) < 5:
+        return (0.0, 0.0, 0.0)
+
+    return (
+        float(np.median(roi_hsv[:, :, 0][bright])),
+        float(np.median(roi_hsv[:, :, 1][bright])),
+        float(np.median(roi_hsv[:, :, 2][bright])),
+    )
+
+
 def extract_text(
     tooltip_img: np.ndarray, reader
-) -> list[tuple[list, str, float]]:
+) -> list[tuple[list, str, float, tuple[float, float, float]]]:
     """Run OCR on a tooltip image.
 
     Args:
@@ -25,9 +49,12 @@ def extract_text(
         reader: An initialized easyocr.Reader instance.
 
     Returns:
-        List of (bbox, text, confidence) sorted top-to-bottom.
+        List of (bbox, text, confidence, hsv) sorted top-to-bottom,
+        where hsv is the median (H, S, V) of the text pixels.
     """
     processed = preprocess_tooltip(tooltip_img)
+    hsv = cv2.cvtColor(processed, cv2.COLOR_BGR2HSV)
+    gray = cv2.cvtColor(processed, cv2.COLOR_BGR2GRAY)
 
     results = reader.readtext(
         processed,
@@ -40,4 +67,10 @@ def extract_text(
     # Sort by vertical position (top of bounding box)
     results.sort(key=lambda r: r[0][0][1])
 
-    return results
+    # Annotate each result with text color
+    annotated = []
+    for bbox, text, conf in results:
+        text_hsv = _median_text_hsv(hsv, gray, bbox)
+        annotated.append((bbox, text, conf, text_hsv))
+
+    return annotated
