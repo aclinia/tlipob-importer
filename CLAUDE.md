@@ -22,7 +22,7 @@ uv run pyright
 uv run ruff check --fix
 
 # Run CLI on screenshots
-uv run python src/ocr/main.py path/to/screenshot.png
+uv run python -m src.ocr.main path/to/screenshot.png
 ```
 
 Uses `uv` as the package manager. Python 3.13+.
@@ -45,4 +45,4 @@ Key types: `ItemData` (dataclass), `Bbox` (list of corner points), `OcrResult` (
 
 - Pyright strict mode with Python 3.13 target
 - Tests are pytest-based with a module-scoped EasyOCR `reader` fixture (GPU-enabled)
-- pytest pythonpath includes `src` so imports use `from ocr import ...`
+- Imports use `src` prefix (e.g., `from src.ocr import ...`)

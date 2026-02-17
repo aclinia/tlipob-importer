@@ -3,7 +3,7 @@ from typing import Any
 import cv2
 import numpy as np
 
-# EasyOCR bbox: 4 corner points, each [x, y]
+# OCR bbox: 4 corner points, each [x, y]
 type Bbox = list[list[int]]
 type OcrResult = tuple[Bbox, str, float, tuple[float, float, float]]
 
@@ -11,13 +11,9 @@ def preprocess_tooltip(tooltip_img: np.ndarray) -> np.ndarray:
     """Preprocess a cropped tooltip image for OCR.
 
     The tooltip has colored text on a semi-transparent dark background.
-    EasyOCR handles this well with just upscaling — heavy preprocessing
-    (inversion, binarization) actually hurts because game-world elements
-    bleed through the semi-transparent overlay.
+    PaddleOCR handles this well at native resolution — no upscaling needed.
     """
-    h, w = tooltip_img.shape[:2]
-    upscaled = cv2.resize(tooltip_img, (w * 2, h * 2), interpolation=cv2.INTER_CUBIC)
-    return upscaled
+    return tooltip_img
 
 
 def _median_text_hsv(
@@ -51,7 +47,7 @@ def extract_text(
 
     Args:
         tooltip_img: BGR cropped tooltip image.
-        reader: An initialized easyocr.Reader instance.
+        reader: An initialized PaddleOCR instance.
 
     Returns:
         List of (bbox, text, confidence, hsv) sorted top-to-bottom,
@@ -61,14 +57,15 @@ def extract_text(
     hsv = cv2.cvtColor(processed, cv2.COLOR_BGR2HSV)
     gray = cv2.cvtColor(processed, cv2.COLOR_BGR2GRAY)
 
-    results: list[tuple[Bbox, str, float]] = reader.readtext(
-        processed,
-        paragraph=False,
-        text_threshold=0.5,
-        low_text=0.3,
-        width_ths=0.7,
-        allowlist="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-.:%'()[] ",
-    )
+    # PaddleOCR 3.4+ predict() returns OCRResult objects with parallel lists
+    page_results = reader.predict(processed)
+    results: list[tuple[Bbox, str, float]] = []
+    for page in page_results:
+        for poly, text, score in zip(
+            page["dt_polys"], page["rec_texts"], page["rec_scores"]
+        ):
+            bbox: Bbox = [[int(p[0]), int(p[1])] for p in poly]
+            results.append((bbox, text, float(score)))
 
     # Sort by vertical position (top of bounding box)
     results.sort(key=lambda r: r[0][0][1])

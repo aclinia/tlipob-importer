@@ -1,7 +1,10 @@
+import os
 from typing import Any
 
+os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True"
+
 import pytest
-import easyocr  # type: ignore[import-untyped]
+from paddleocr import PaddleOCR  # type: ignore[import-untyped]
 
 from src.ocr.ocr import process_screenshot
 
@@ -10,7 +13,12 @@ EXAMPLES_DIR = "examples/inventory"
 
 @pytest.fixture(scope="module")
 def reader() -> Any:
-    return easyocr.Reader(["en"], gpu=True)
+    return PaddleOCR(
+        lang="en",
+        use_doc_orientation_classify=False,
+        use_doc_unwarping=False,
+        use_textline_orientation=False,
+    )
 
 
 def test_screenshot_1(reader: Any) -> None:
