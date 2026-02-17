@@ -1,7 +1,7 @@
 import re
 from dataclasses import dataclass, field
 
-from .ocr_engine import Bbox, OcrResult
+from .ocr_engine import OcrResult
 
 # Lines matching these patterns are excluded entirely
 EXCLUDE_PATTERNS = [
@@ -26,26 +26,18 @@ MIN_CONFIDENCE = 0.3
 # Pattern to extract equipment type (strip parenthetical and Lv info)
 EQUIP_TYPE_RE = re.compile(r"^(.+?)\s*\(")
 
-# Base stat pattern: a bare number + stat name, e.g. "565 Max Energy Shield", "1615 Evasion"
-# Does NOT start with +/- (those are affixes)
-BASE_STAT_RE = re.compile(r"^\d+\s+[A-Z]")
-
-
 @dataclass
 class ItemData:
     name: str = ""
     equipment_type: str = ""
-    base_stats: str = ""
     custom_affixes: list[str] = field(default_factory=lambda: [])
 
-    def to_dict(self) -> dict[str, str | list[str] | None]:
-        result: dict[str, str | list[str] | None] = {
+    def to_dict(self) -> dict[str, str | list[str]]:
+        return {
             "name": self.name,
             "equipmentType": self.equipment_type,
-            "baseStats": self.base_stats if self.base_stats else None,
             "customAffixes": self.custom_affixes,
         }
-        return result
 
 
 def _is_flavor_text(hsv: tuple[float, float, float]) -> bool:
@@ -82,37 +74,24 @@ def _extract_equipment_type(text: str) -> str:
     return re.sub(r"\s*Lv\.\d+\s*$", "", text).strip()
 
 
-def _ocr_line_y(bbox: Bbox) -> float:
-    """Get the vertical center of an OCR bounding box (in upscaled coordinates)."""
-    import numpy as np
-
-    pts = np.array(bbox, dtype=np.int32)
-    return float((pts[:, 1].min() + pts[:, 1].max()) / 2)
-
 
 def parse_tooltip_text(
     ocr_results: list[OcrResult],
-    separator_y: int | None = None,
 ) -> ItemData:
     """Parse OCR results into structured item data.
 
     Args:
         ocr_results: List of (bbox, text, confidence, hsv) from extract_text.
-        separator_y: Y-position of the separator line in the original tooltip
-                     crop (before 2x upscale). None if no separator found.
 
     Returns:
-        Structured ItemData with name, type, base stats, and affixes.
+        Structured ItemData with name, type, and affixes.
     """
     item = ItemData()
 
-    # Separator y in upscaled (2x) coordinates to match OCR bboxes
-    sep_y_upscaled = separator_y * 2 if separator_y is not None else None
+    # Phase 1: collect all valid lines
+    valid_lines: list[tuple[str, bool]] = []
 
-    # Phase 1: collect all valid lines with their y-positions
-    valid_lines: list[tuple[float, str]] = []
-
-    for bbox, raw_text, confidence, hsv in ocr_results:
+    for _bbox, raw_text, confidence, hsv, has_bullet in ocr_results:
         if confidence < MIN_CONFIDENCE:
             continue
 
@@ -126,40 +105,24 @@ def parse_tooltip_text(
         if any(p.search(text) for p in EXCLUDE_PATTERNS):
             continue
 
-        y_pos = _ocr_line_y(bbox)
-        valid_lines.append((y_pos, text))
+        valid_lines.append((text, has_bullet))
 
     if not valid_lines:
         return item
 
     # Phase 2: assign roles
     # First line = name
-    item.name = valid_lines[0][1]
+    item.name = valid_lines[0][0]
 
     # Second line = equipment type (if it looks like a type line)
     if len(valid_lines) > 1:
-        item.equipment_type = _extract_equipment_type(valid_lines[1][1])
+        item.equipment_type = _extract_equipment_type(valid_lines[1][0])
 
-    # Phase 3: split remaining lines by separator
-    remaining = valid_lines[2:]  # skip name and type
-
-    if sep_y_upscaled is not None and remaining:
-        # Lines above separator = base stats, below = affixes
-        above = [text for y, text in remaining if y < sep_y_upscaled]
-        below = [text for y, text in remaining if y >= sep_y_upscaled]
-
-        if above:
-            item.base_stats = " ".join(above)
-        item.custom_affixes = below
-    else:
-        # No separator detected. Use pattern matching as fallback:
-        # if the first remaining line looks like a base stat (number + name),
-        # treat it as the base stat and the rest as affixes.
-        texts = [text for _, text in remaining]
-        if texts and BASE_STAT_RE.match(texts[0]):
-            item.base_stats = texts[0]
-            item.custom_affixes = texts[1:]
-        else:
-            item.custom_affixes = texts
+    # Phase 3: extract affixes
+    # Base stats have no bullet point and appear before the first bulleted line.
+    # Skip them — keep only lines from the first bullet onward.
+    remaining = valid_lines[2:]
+    first_bullet = next((i for i, (_, b) in enumerate(remaining) if b), 0)
+    item.custom_affixes = [text for text, _ in remaining[first_bullet:]]
 
     return item

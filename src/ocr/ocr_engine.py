@@ -5,7 +5,7 @@ import numpy as np
 
 # OCR bbox: 4 corner points, each [x, y]
 type Bbox = list[list[int]]
-type OcrResult = tuple[Bbox, str, float, tuple[float, float, float]]
+type OcrResult = tuple[Bbox, str, float, tuple[float, float, float], bool]
 
 def preprocess_tooltip(tooltip_img: np.ndarray) -> np.ndarray:
     """Preprocess a cropped tooltip image for OCR.
@@ -40,6 +40,84 @@ def _median_text_hsv(
     )
 
 
+def _has_bullet_left(image_hsv: np.ndarray, bbox: Bbox) -> bool:
+    """Check for a colored bullet point in the strip to the left of a text bbox."""
+    x_min = min(p[0] for p in bbox)
+    y_min = min(p[1] for p in bbox)
+    y_max = max(p[1] for p in bbox)
+
+    strip_x1 = max(0, x_min - 35)
+    strip_x2 = max(0, x_min - 3)
+    if strip_x2 <= strip_x1:
+        return False
+
+    strip = image_hsv[y_min:y_max, strip_x1:strip_x2]
+    bright_saturated = (strip[:, :, 1] > 50) & (strip[:, :, 2] > 100)
+    return bool(np.sum(bright_saturated) > 50)
+
+
+def _merge_same_line(results: list[OcrResult], y_threshold: float = 15.0) -> list[OcrResult]:
+    """Merge OCR fragments that share the same visual line.
+
+    PaddleOCR often splits a single line into multiple fragments
+    (e.g., "+257", "Max", "Life"). This groups fragments whose vertical
+    centers are within y_threshold pixels, then merges each group
+    left-to-right into a single result.
+    """
+    if not results:
+        return results
+
+    # Compute y-center for each result
+    def y_mid(r: OcrResult) -> float:
+        bbox = r[0]
+        ys = [p[1] for p in bbox]
+        return (min(ys) + max(ys)) / 2.0
+
+    # Group fragments by similar y-center
+    groups: list[list[OcrResult]] = []
+    sorted_results = sorted(results, key=y_mid)
+
+    current_group: list[OcrResult] = [sorted_results[0]]
+    current_y = y_mid(sorted_results[0])
+
+    for r in sorted_results[1:]:
+        ym = y_mid(r)
+        if abs(ym - current_y) <= y_threshold:
+            current_group.append(r)
+        else:
+            groups.append(current_group)
+            current_group = [r]
+            current_y = ym
+
+    groups.append(current_group)
+
+    # Merge each group into a single OcrResult
+    merged: list[OcrResult] = []
+    for group in groups:
+        if len(group) == 1:
+            merged.append(group[0])
+            continue
+
+        # Sort left-to-right by x position
+        group.sort(key=lambda r: min(p[0] for p in r[0]))
+
+        # Compute enclosing bounding box
+        all_xs = [p[0] for r in group for p in r[0]]
+        all_ys = [p[1] for r in group for p in r[0]]
+        x1, x2 = min(all_xs), max(all_xs)
+        y1, y2 = min(all_ys), max(all_ys)
+        bbox: Bbox = [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
+
+        text = " ".join(r[1] for r in group)
+        conf = min(r[2] for r in group)
+        hsv_color = group[0][3]  # leftmost fragment's color
+        has_bullet = any(r[4] for r in group)
+
+        merged.append((bbox, text, conf, hsv_color, has_bullet))
+
+    return merged
+
+
 def extract_text(
     tooltip_img: np.ndarray, reader: Any
 ) -> list[OcrResult]:
@@ -50,8 +128,9 @@ def extract_text(
         reader: An initialized PaddleOCR instance.
 
     Returns:
-        List of (bbox, text, confidence, hsv) sorted top-to-bottom,
-        where hsv is the median (H, S, V) of the text pixels.
+        List of (bbox, text, confidence, hsv, has_bullet) sorted top-to-bottom,
+        where hsv is the median (H, S, V) of the text pixels and has_bullet
+        indicates a colored bullet point to the left of the text.
     """
     processed = preprocess_tooltip(tooltip_img)
     hsv = cv2.cvtColor(processed, cv2.COLOR_BGR2HSV)
@@ -70,10 +149,11 @@ def extract_text(
     # Sort by vertical position (top of bounding box)
     results.sort(key=lambda r: r[0][0][1])
 
-    # Annotate each result with text color
+    # Annotate each result with text color and bullet presence
     annotated: list[OcrResult] = []
     for bbox, text, conf in results:
         text_hsv = _median_text_hsv(hsv, gray, bbox)
-        annotated.append((bbox, text, conf, text_hsv))
+        has_bullet = _has_bullet_left(hsv, bbox)
+        annotated.append((bbox, text, conf, text_hsv, has_bullet))
 
-    return annotated
+    return _merge_same_line(annotated)

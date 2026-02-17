@@ -5,7 +5,7 @@ import cv2
 
 from .ocr_engine import extract_text
 from .parser import ItemData, parse_tooltip_text
-from .tooltip_detector import detect_separator_line, detect_tooltip_region
+from .tooltip_detector import detect_tooltip_region
 
 
 def process_screenshot(image_path: str, reader: Any) -> ItemData | None:
@@ -23,7 +23,6 @@ def process_screenshot(image_path: str, reader: Any) -> ItemData | None:
     x, y, w, h = region
     tooltip_img = image[y : y + h, x : x + w]
 
-    separator_y = detect_separator_line(tooltip_img)
     ocr_results = extract_text(tooltip_img, reader)
 
-    return parse_tooltip_text(ocr_results, separator_y)
+    return parse_tooltip_text(ocr_results)
