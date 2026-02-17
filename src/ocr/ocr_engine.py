@@ -1,5 +1,11 @@
+from typing import Any
+
 import cv2
 import numpy as np
+
+# EasyOCR bbox: 4 corner points, each [x, y]
+type Bbox = list[list[int]]
+type OcrResult = tuple[Bbox, str, float, tuple[float, float, float]]
 
 
 def preprocess_tooltip(tooltip_img: np.ndarray) -> np.ndarray:
@@ -16,7 +22,7 @@ def preprocess_tooltip(tooltip_img: np.ndarray) -> np.ndarray:
 
 
 def _median_text_hsv(
-    image_hsv: np.ndarray, image_gray: np.ndarray, bbox: list
+    image_hsv: np.ndarray, image_gray: np.ndarray, bbox: Bbox
 ) -> tuple[float, float, float]:
     """Compute the median HSV of bright (text) pixels within a bounding box."""
     pts = np.array(bbox, dtype=np.int32)
@@ -40,8 +46,8 @@ def _median_text_hsv(
 
 
 def extract_text(
-    tooltip_img: np.ndarray, reader
-) -> list[tuple[list, str, float, tuple[float, float, float]]]:
+    tooltip_img: np.ndarray, reader: Any
+) -> list[OcrResult]:
     """Run OCR on a tooltip image.
 
     Args:
@@ -56,7 +62,7 @@ def extract_text(
     hsv = cv2.cvtColor(processed, cv2.COLOR_BGR2HSV)
     gray = cv2.cvtColor(processed, cv2.COLOR_BGR2GRAY)
 
-    results = reader.readtext(
+    results: list[tuple[Bbox, str, float]] = reader.readtext(
         processed,
         paragraph=False,
         text_threshold=0.5,
@@ -68,7 +74,7 @@ def extract_text(
     results.sort(key=lambda r: r[0][0][1])
 
     # Annotate each result with text color
-    annotated = []
+    annotated: list[OcrResult] = []
     for bbox, text, conf in results:
         text_hsv = _median_text_hsv(hsv, gray, bbox)
         annotated.append((bbox, text, conf, text_hsv))

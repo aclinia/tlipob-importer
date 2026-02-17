@@ -1,5 +1,7 @@
+from typing import Any
+
 import pytest
-import easyocr
+import easyocr  # type: ignore[import-untyped]
 
 from ocr.ocr import process_screenshot
 
@@ -7,11 +9,11 @@ EXAMPLES_DIR = "examples/inventory"
 
 
 @pytest.fixture(scope="module")
-def reader():
+def reader() -> Any:
     return easyocr.Reader(["en"], gpu=True)
 
 
-def test_screenshot_1(reader):
+def test_screenshot_1(reader: Any) -> None:
     item = process_screenshot(f"{EXAMPLES_DIR}/screenshot_1.png", reader)
     assert item is not None
     d = item.to_dict()
@@ -34,7 +36,7 @@ def test_screenshot_1(reader):
     ]
 
 
-def test_screenshot_2(reader):
+def test_screenshot_2(reader: Any) -> None:
     item = process_screenshot(f"{EXAMPLES_DIR}/screenshot_2.png", reader)
     assert item is not None
     d = item.to_dict()
@@ -51,7 +53,7 @@ def test_screenshot_2(reader):
     ]
 
 
-def test_screenshot_3(reader):
+def test_screenshot_3(reader: Any) -> None:
     item = process_screenshot(f"{EXAMPLES_DIR}/screenshot_3.png", reader)
     assert item is not None
     d = item.to_dict()
@@ -86,7 +88,7 @@ def test_screenshot_3(reader):
     ]
 
 
-def test_screenshot_4(reader):
+def test_screenshot_4(reader: Any) -> None:
     item = process_screenshot(f"{EXAMPLES_DIR}/screenshot_4.png", reader)
     assert item is not None
     d = item.to_dict()
@@ -106,7 +108,7 @@ def test_screenshot_4(reader):
     ]
 
 
-def test_screenshot_5(reader):
+def test_screenshot_5(reader: Any) -> None:
     item = process_screenshot(f"{EXAMPLES_DIR}/screenshot_5.png", reader)
     assert item is not None
     d = item.to_dict()
@@ -130,7 +132,7 @@ def test_screenshot_5(reader):
     ]
 
 
-def test_screenshot_6(reader):
+def test_screenshot_6(reader: Any) -> None:
     item = process_screenshot(f"{EXAMPLES_DIR}/screenshot_6.png", reader)
     assert item is not None
     d = item.to_dict()
@@ -152,7 +154,7 @@ def test_screenshot_6(reader):
     ]
 
 
-def test_screenshot_7(reader):
+def test_screenshot_7(reader: Any) -> None:
     item = process_screenshot(f"{EXAMPLES_DIR}/screenshot_7.png", reader)
     assert item is not None
     d = item.to_dict()
@@ -184,7 +186,7 @@ def test_screenshot_7(reader):
     ]
 
 
-def test_screenshot_8(reader):
+def test_screenshot_8(reader: Any) -> None:
     item = process_screenshot(f"{EXAMPLES_DIR}/screenshot_8.png", reader)
     assert item is not None
     d = item.to_dict()
@@ -202,7 +204,7 @@ def test_screenshot_8(reader):
     ]
 
 
-def test_screenshot_9(reader):
+def test_screenshot_9(reader: Any) -> None:
     item = process_screenshot(f"{EXAMPLES_DIR}/screenshot_9.png", reader)
     assert item is not None
     d = item.to_dict()
@@ -224,7 +226,7 @@ def test_screenshot_9(reader):
     ]
 
 
-def test_screenshot_10(reader):
+def test_screenshot_10(reader: Any) -> None:
     item = process_screenshot(f"{EXAMPLES_DIR}/screenshot_10.png", reader)
     assert item is not None
     d = item.to_dict()

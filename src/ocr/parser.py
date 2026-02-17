@@ -1,6 +1,8 @@
 import re
 from dataclasses import dataclass, field
 
+from .ocr_engine import Bbox, OcrResult
+
 # Lines matching these patterns are excluded entirely
 EXCLUDE_PATTERNS = [
     re.compile(r"^Equipped", re.IGNORECASE),
@@ -34,10 +36,10 @@ class ItemData:
     name: str = ""
     equipment_type: str = ""
     base_stats: str = ""
-    custom_affixes: list[str] = field(default_factory=list)
+    custom_affixes: list[str] = field(default_factory=lambda: [])
 
-    def to_dict(self) -> dict:
-        result: dict = {
+    def to_dict(self) -> dict[str, str | list[str] | None]:
+        result: dict[str, str | list[str] | None] = {
             "name": self.name,
             "equipmentType": self.equipment_type,
             "baseStats": self.base_stats if self.base_stats else None,
@@ -80,16 +82,16 @@ def _extract_equipment_type(text: str) -> str:
     return re.sub(r"\s*Lv\.\d+\s*$", "", text).strip()
 
 
-def _ocr_line_y(bbox: list) -> float:
+def _ocr_line_y(bbox: Bbox) -> float:
     """Get the vertical center of an OCR bounding box (in upscaled coordinates)."""
     import numpy as np
 
-    pts = np.array(bbox)
+    pts = np.array(bbox, dtype=np.int32)
     return float((pts[:, 1].min() + pts[:, 1].max()) / 2)
 
 
 def parse_tooltip_text(
-    ocr_results: list[tuple[list, str, float, tuple[float, float, float]]],
+    ocr_results: list[OcrResult],
     separator_y: int | None = None,
 ) -> ItemData:
     """Parse OCR results into structured item data.

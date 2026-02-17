@@ -1,14 +1,15 @@
 import sys
+from typing import Any
 
 import cv2
-import easyocr
+import easyocr  # type: ignore[import-untyped]
 
 from .ocr_engine import extract_text
 from .parser import ItemData, parse_tooltip_text
 from .tooltip_detector import detect_separator_line, detect_tooltip_region
 
 
-def process_screenshot(image_path: str, reader: easyocr.Reader) -> ItemData | None:
+def process_screenshot(image_path: str, reader: Any) -> ItemData | None:
     """Process a single screenshot through the full pipeline."""
     image = cv2.imread(image_path)
     if image is None:

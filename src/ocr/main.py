@@ -1,12 +1,12 @@
 import json
 import sys
 
-import easyocr
+import easyocr  # type: ignore[import-untyped]
 
 from .ocr import process_screenshot
 
 
-def main():
+def main() -> None:
     if len(sys.argv) < 2:
         print(f"Usage: {sys.argv[0]} <screenshot> [screenshot ...]", file=sys.stderr)
         sys.exit(1)
