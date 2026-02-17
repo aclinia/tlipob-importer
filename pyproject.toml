@@ -16,6 +16,9 @@ dev = [
     "ruff>=0.15.1",
 ]
 
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
 [tool.pyright]
 typeCheckingMode = "strict"
 pythonVersion = "3.14"
